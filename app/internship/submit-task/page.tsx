@@ -70,6 +70,9 @@ function TaskSubmissionContent() {
   const [candidateName, setCandidateName] = useState(candidateNameParam);
   const [taskName, setTaskName] = useState(taskNameParam);
   const [taskDeadline, setTaskDeadline] = useState("");
+  const [rawDeadline, setRawDeadline] = useState("");
+  const [timeLeft, setTimeLeft] = useState("");
+  const [isOverdue, setIsOverdue] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [candidate, setCandidate] = useState<Candidate | null>(null);
@@ -99,6 +102,7 @@ function TaskSubmissionContent() {
           setCandidateName(data.name);
           if (data.task) {
             setTaskName(data.task.title);
+            setRawDeadline(data.task.deadline);
             setTaskDeadline(formatDeadline(data.task.deadline));
           }
           if (data.taskSubmission) {
@@ -118,6 +122,43 @@ function TaskSubmissionContent() {
         setLoading(false);
       });
   }, [candidateId]);
+
+  useEffect(() => {
+    if (!rawDeadline) return;
+
+    const targetDate = new Date(rawDeadline);
+    if (isNaN(targetDate.getTime())) return;
+
+    const updateTimer = () => {
+      const now = new Date();
+      const diff = targetDate.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        setTimeLeft("Deadline passed");
+        setIsOverdue(true);
+        return;
+      }
+
+      setIsOverdue(false);
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      const parts: string[] = [];
+      if (days > 0) parts.push(`${days}d`);
+      if (hours > 0 || days > 0) parts.push(`${hours}h`);
+      parts.push(`${minutes}m`);
+      parts.push(`${seconds}s`);
+
+      setTimeLeft(parts.join(" "));
+    };
+
+    updateTimer();
+    const intervalId = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [rawDeadline]);
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -270,8 +311,25 @@ function TaskSubmissionContent() {
                 Candidate Name: <strong>{candidateName}</strong> (ID: {candidateId})
               </p>
               {taskDeadline && (
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(245,158,11,0.08)", color: "#D97706", padding: "4px 10px", borderRadius: "6px", fontSize: "0.78rem", fontWeight: 600, marginTop: "8px" }}>
-                  <span>Deadline: {taskDeadline}</span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px", alignItems: "center" }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(245,158,11,0.08)", color: "#D97706", padding: "4px 10px", borderRadius: "6px", fontSize: "0.78rem", fontWeight: 600 }}>
+                    <span>Deadline: {taskDeadline}</span>
+                  </div>
+                  {timeLeft && (
+                    <div style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      background: isOverdue ? "rgba(239, 68, 68, 0.08)" : "rgba(16, 185, 129, 0.08)",
+                      color: isOverdue ? "#EF4444" : "#10B981",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      fontSize: "0.78rem",
+                      fontWeight: 700
+                    }}>
+                      <span>Time Remaining: {timeLeft}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
