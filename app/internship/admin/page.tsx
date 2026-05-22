@@ -432,91 +432,208 @@ export default function InternshipAdminPage() {
               )}
             </div>
 
-            {/* View Project Details Modal */}
+            {/* View Full Details Modal */}
             <AnimatePresence>
               {selectedCandidate && (
-                <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(15,23,42,0.4)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "16px" }}>
-                  <motion.div 
+                <div
+                  onClick={(e) => { if (e.target === e.currentTarget) setSelectedCandidate(null); }}
+                  style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(15,23,42,0.45)", backdropFilter: "blur(5px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "16px" }}
+                >
+                  <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.95, opacity: 0 }}
-                    style={{ background: "#FFFFFF", borderRadius: "16px", width: "100%", maxWidth: "600px", margin: "auto", overflow: "hidden", border: "1px solid #E5E7EB", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)" }}
+                    style={{ background: "#FFFFFF", borderRadius: "16px", width: "100%", maxWidth: "720px", margin: "auto", overflow: "hidden", border: "1px solid #E5E7EB", boxShadow: "0 20px 40px -5px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", maxHeight: "90vh" }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #F3F4F6", background: "#F9FAFB" }}>
-                      <div>
-                        <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#111827" }}>{selectedCandidate.name}</h3>
-                        <p style={{ fontSize: "0.75rem", color: "#6B7280" }}>Application ID: {selectedCandidate.id} • Applied on {selectedCandidate.appliedAt}</p>
-                      </div>
-                      <button onClick={() => setSelectedCandidate(null)} style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer", padding: "4px" }}><X size={20} /></button>
-                    </div>
-                    
-                    <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px", maxHeight: "70vh", overflowY: "auto" }}>
-                      <div>
-                        <h4 style={{ fontSize: "0.75rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: "4px" }}><GraduationCap size={13} /> Qualification & Profile</h4>
-                        <div style={{ background: "#F9FAFB", padding: "10px 14px", borderRadius: "8px", fontSize: "0.85rem", marginTop: "6px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-                          <span><strong>Qualification:</strong> {selectedCandidate.qualification}</span>
-                          <span><strong>Age:</strong> {selectedCandidate.age}</span>
-                          <span><strong>Location:</strong> {selectedCandidate.city}</span>
+                    {/* Modal Header */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: "1px solid #E5E7EB", background: "#F9FAFB", flexShrink: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "rgba(99,102,241,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <User size={20} style={{ color: "#4F46E5" }} />
+                        </div>
+                        <div>
+                          <h3 style={{ fontSize: "17px", fontWeight: 800, color: "#111827", margin: 0 }}>{selectedCandidate.name}</h3>
+                          <p style={{ fontSize: "0.72rem", color: "#6B7280", margin: "2px 0 0" }}>
+                            Application ID: <strong style={{ color: "#4F46E5" }}>{selectedCandidate.id}</strong> &nbsp;•&nbsp; Applied: {selectedCandidate.appliedAt}
+                          </p>
                         </div>
                       </div>
-                      
+                      <button onClick={() => setSelectedCandidate(null)} style={{ background: "#F3F4F6", border: "none", color: "#6B7280", cursor: "pointer", padding: "6px", borderRadius: "8px", display: "flex", alignItems: "center" }}>
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    {/* Scrollable Body */}
+                    <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "20px", overflowY: "auto" }}>
+
+                      {/* Section 1: Personal Information */}
                       <div>
-                        <h4 style={{ fontSize: "0.75rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: "4px" }}><Code size={13} /> Project Portfolio</h4>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "8px" }}>
-                          {Array.isArray(selectedCandidate.projects) ? (
-                            selectedCandidate.projects.map((proj, idx) => (
-                              <div key={idx} style={{ background: "#F9FAFB", padding: "12px 14px", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
-                                  <span style={{ fontWeight: 700, fontSize: "0.85rem", color: "#111827" }}>Project #{idx + 1}: {proj.title}</span>
-                                  {proj.url && (
-                                    <a href={proj.url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.72rem", color: "#4F46E5", fontWeight: 600, textDecoration: "none" }}>
-                                      Link <ExternalLink size={10} />
-                                    </a>
-                                  )}
-                                </div>
-                                <p style={{ fontSize: "0.8rem", color: "#475569", marginTop: "6px", whiteSpace: "pre-line", lineHeight: 1.4 }}>{proj.description}</p>
-                              </div>
-                            ))
+                        <h4 style={{ fontSize: "0.72rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.07em", display: "flex", alignItems: "center", gap: "5px", marginBottom: "10px" }}>
+                          <User size={12} /> Personal Information
+                        </h4>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                          {[
+                            { label: "Full Name", value: selectedCandidate.name },
+                            { label: "Age", value: `${selectedCandidate.age} years` },
+                            { label: "City / Location", value: selectedCandidate.city },
+                            { label: "Qualification", value: selectedCandidate.qualification + (selectedCandidate.qualificationOther ? ` (${selectedCandidate.qualificationOther})` : "") },
+                          ].map(({ label, value }) => (
+                            <div key={label} style={{ background: "#F9FAFB", padding: "10px 14px", borderRadius: "8px", border: "1px solid #F3F4F6" }}>
+                              <p style={{ fontSize: "0.68rem", color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", margin: 0 }}>{label}</p>
+                              <p style={{ fontSize: "0.85rem", fontWeight: 600, color: "#111827", marginTop: "3px", wordBreak: "break-word" }}>{value || "—"}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Section 2: Contact Details */}
+                      <div>
+                        <h4 style={{ fontSize: "0.72rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.07em", display: "flex", alignItems: "center", gap: "5px", marginBottom: "10px" }}>
+                          <Phone size={12} /> Contact & Links
+                        </h4>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                          <div style={{ background: "#F9FAFB", padding: "10px 14px", borderRadius: "8px", border: "1px solid #F3F4F6" }}>
+                            <p style={{ fontSize: "0.68rem", color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", margin: 0 }}>Email</p>
+                            <a href={`mailto:${selectedCandidate.email}`} style={{ fontSize: "0.82rem", fontWeight: 600, color: "#4F46E5", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", marginTop: "3px", wordBreak: "break-all" }}>
+                              <Mail size={12} /> {selectedCandidate.email}
+                            </a>
+                          </div>
+                          <div style={{ background: "#F9FAFB", padding: "10px 14px", borderRadius: "8px", border: "1px solid #F3F4F6" }}>
+                            <p style={{ fontSize: "0.68rem", color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", margin: 0 }}>Phone</p>
+                            <a href={`tel:${selectedCandidate.phone}`} style={{ fontSize: "0.82rem", fontWeight: 600, color: "#10B981", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", marginTop: "3px" }}>
+                              <Phone size={12} /> {selectedCandidate.phone}
+                            </a>
+                          </div>
+                          <div style={{ background: "#F9FAFB", padding: "10px 14px", borderRadius: "8px", border: "1px solid #F3F4F6" }}>
+                            <p style={{ fontSize: "0.68rem", color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", margin: 0 }}>GitHub Profile</p>
+                            <a href={selectedCandidate.githubUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.82rem", fontWeight: 600, color: "#374151", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", marginTop: "3px", wordBreak: "break-all" }}>
+                              <Github size={12} /> {selectedCandidate.githubUrl}
+                            </a>
+                          </div>
+                          <div style={{ background: "#F9FAFB", padding: "10px 14px", borderRadius: "8px", border: "1px solid #F3F4F6" }}>
+                            <p style={{ fontSize: "0.68rem", color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", margin: 0 }}>Resume / Portfolio</p>
+                            <a href={selectedCandidate.resumeUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.82rem", fontWeight: 600, color: "#4F46E5", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", marginTop: "3px", wordBreak: "break-all" }}>
+                              <FileText size={12} /> View Resume <ExternalLink size={10} />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Section 3: Tech Stack & Languages */}
+                      <div>
+                        <h4 style={{ fontSize: "0.72rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.07em", display: "flex", alignItems: "center", gap: "5px", marginBottom: "10px" }}>
+                          <Code size={12} /> Programming Languages & Frameworks
+                        </h4>
+                        <div style={{ background: "#F9FAFB", padding: "12px 14px", borderRadius: "8px", border: "1px solid #F3F4F6" }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                            {(selectedCandidate.languages || []).map((lang) => (
+                              <span key={lang} style={{ fontSize: "0.75rem", background: "#EEF2FF", color: "#4F46E5", padding: "3px 10px", borderRadius: "999px", fontWeight: 600, border: "1px solid #C7D2FE" }}>{lang}</span>
+                            ))}
+                            {(!selectedCandidate.languages || selectedCandidate.languages.length === 0) && (
+                              <span style={{ fontSize: "0.8rem", color: "#9CA3AF" }}>No languages specified</span>
+                            )}
+                          </div>
+                          <p style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: "8px", fontWeight: 500 }}>{selectedCandidate.languages?.length || 0} skill{selectedCandidate.languages?.length !== 1 ? "s" : ""} selected</p>
+                        </div>
+                      </div>
+
+                      {/* Section 4: Supabase Experience */}
+                      <div>
+                        <h4 style={{ fontSize: "0.72rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.07em", display: "flex", alignItems: "center", gap: "5px", marginBottom: "10px" }}>
+                          <Sparkles size={12} /> Supabase Experience
+                        </h4>
+                        <div style={{ background: "#F9FAFB", padding: "12px 14px", borderRadius: "8px", border: "1px solid #F3F4F6", display: "flex", alignItems: "center", gap: "10px" }}>
+                          {selectedCandidate.knowsSupabase === "hands-on" ? (
+                            <span style={{ background: "rgba(99,102,241,0.12)", color: "#4F46E5", fontWeight: 700, padding: "5px 14px", borderRadius: "999px", fontSize: "0.8rem" }}>🔥 Hands-on Expertise — High selection priority</span>
+                          ) : selectedCandidate.knowsSupabase === "basic" ? (
+                            <span style={{ background: "rgba(99,102,241,0.06)", color: "#6366F1", fontWeight: 600, padding: "5px 14px", borderRadius: "999px", fontSize: "0.8rem" }}>📘 Basic Knowledge</span>
                           ) : (
-                            <p style={{ background: "#F9FAFB", padding: "12px 14px", borderRadius: "8px", fontSize: "0.85rem", marginTop: "6px", color: "#374151", whiteSpace: "pre-line", lineHeight: 1.5 }}>
-                              {String(selectedCandidate.projects)}
-                            </p>
+                            <span style={{ background: "#F3F4F6", color: "#6B7280", fontWeight: 500, padding: "5px 14px", borderRadius: "999px", fontSize: "0.8rem" }}>No Supabase Experience</span>
                           )}
                         </div>
                       </div>
 
+                      {/* Section 5: Database Paradigm */}
                       {selectedCandidate.dbParadigm && (
                         <div>
-                          <h4 style={{ fontSize: "0.75rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: "4px" }}><Database size={13} /> Database Paradigm ({selectedCandidate.dbParadigm})</h4>
-                          <p style={{ background: "#F9FAFB", padding: "12px 14px", borderRadius: "8px", fontSize: "0.85rem", marginTop: "6px", color: "#374151", whiteSpace: "pre-line", lineHeight: 1.4 }}>
-                            {selectedCandidate.dbParadigmExplanation}
-                          </p>
+                          <h4 style={{ fontSize: "0.72rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.07em", display: "flex", alignItems: "center", gap: "5px", marginBottom: "10px" }}>
+                            <Database size={12} /> Database Preference &amp; Experience
+                          </h4>
+                          <div style={{ background: "#F9FAFB", padding: "12px 14px", borderRadius: "8px", border: "1px solid #F3F4F6" }}>
+                            <span style={{ background: "#EEF2FF", color: "#4F46E5", fontWeight: 700, padding: "3px 10px", borderRadius: "6px", fontSize: "0.78rem" }}>{selectedCandidate.dbParadigm}</span>
+                            <p style={{ fontSize: "0.83rem", color: "#374151", marginTop: "10px", whiteSpace: "pre-line", lineHeight: 1.6 }}>{selectedCandidate.dbParadigmExplanation}</p>
+                          </div>
                         </div>
                       )}
 
+                      {/* Section 6: Project Portfolio */}
                       <div>
-                        <h4 style={{ fontSize: "0.75rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.05em" }}>Logistics Summary</h4>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "6px" }}>
-                          <div style={{ padding: "10px", borderRadius: "8px", border: "1px solid #E5E7EB", background: selectedCandidate.hasLaptop === "yes" ? "rgba(16,185,129,0.02)" : "rgba(239,68,68,0.02)", borderColor: selectedCandidate.hasLaptop === "yes" ? "#A7F3D0" : "#FCA5A5" }}>
-                            <p style={{ fontSize: "0.7rem", color: "#6B7280", fontWeight: 500 }}>Personal Laptop</p>
-                            <p style={{ fontWeight: 700, fontSize: "0.85rem", color: selectedCandidate.hasLaptop === "yes" ? "#047857" : "#B91C1C", marginTop: "2px" }}>
-                              {selectedCandidate.hasLaptop === "yes" ? "✅ Owned / Ready" : "❌ No personal laptop"}
+                        <h4 style={{ fontSize: "0.72rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.07em", display: "flex", alignItems: "center", gap: "5px", marginBottom: "10px" }}>
+                          <Code size={12} /> Project Portfolio ({Array.isArray(selectedCandidate.projects) ? selectedCandidate.projects.length : 0} project{Array.isArray(selectedCandidate.projects) && selectedCandidate.projects.length !== 1 ? "s" : ""})
+                        </h4>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                          {Array.isArray(selectedCandidate.projects) && selectedCandidate.projects.length > 0 ? (
+                            selectedCandidate.projects.map((proj, idx) => (
+                              <div key={idx} style={{ background: "#F9FAFB", padding: "14px", borderRadius: "10px", border: "1px solid #E5E7EB" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <span style={{ background: "#4F46E5", color: "#fff", width: "22px", height: "22px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 800, flexShrink: 0 }}>{idx + 1}</span>
+                                    <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#111827" }}>{proj.title}</span>
+                                  </div>
+                                  {proj.url && (
+                                    <a href={proj.url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "0.75rem", color: "#4F46E5", fontWeight: 600, textDecoration: "none", background: "rgba(99,102,241,0.08)", padding: "3px 8px", borderRadius: "6px" }}>
+                                      <ExternalLink size={11} /> View Project
+                                    </a>
+                                  )}
+                                </div>
+                                <p style={{ fontSize: "0.82rem", color: "#475569", margin: 0, whiteSpace: "pre-line", lineHeight: 1.6 }}>{proj.description}</p>
+                              </div>
+                            ))
+                          ) : (
+                            <div style={{ background: "#F9FAFB", padding: "14px", borderRadius: "8px", color: "#9CA3AF", fontSize: "0.82rem", textAlign: "center" }}>No projects added</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Section 7: Logistics */}
+                      <div>
+                        <h4 style={{ fontSize: "0.72rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.07em", display: "flex", alignItems: "center", gap: "5px", marginBottom: "10px" }}>
+                          <Laptop size={12} /> Logistics &amp; Availability
+                        </h4>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                          <div style={{ padding: "14px", borderRadius: "10px", border: "1px solid", background: selectedCandidate.hasLaptop === "yes" ? "rgba(16,185,129,0.04)" : "rgba(239,68,68,0.04)", borderColor: selectedCandidate.hasLaptop === "yes" ? "#A7F3D0" : "#FCA5A5" }}>
+                            <p style={{ fontSize: "0.7rem", color: "#6B7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", margin: 0 }}>Personal Laptop</p>
+                            <p style={{ fontWeight: 700, fontSize: "0.88rem", color: selectedCandidate.hasLaptop === "yes" ? "#047857" : "#B91C1C", marginTop: "6px" }}>
+                              {selectedCandidate.hasLaptop === "yes" ? "✅ Yes, I own a laptop" : "❌ No personal laptop"}
                             </p>
                           </div>
-                          <div style={{ padding: "10px", borderRadius: "8px", border: "1px solid #E5E7EB", background: selectedCandidate.canReportPanvel === "yes" ? "rgba(16,185,129,0.02)" : "rgba(239,68,68,0.02)", borderColor: selectedCandidate.canReportPanvel === "yes" ? "#A7F3D0" : "#FCA5A5" }}>
-                            <p style={{ fontSize: "0.7rem", color: "#6B7280", fontWeight: 500 }}>Office Commute</p>
-                            <p style={{ fontWeight: 700, fontSize: "0.85rem", color: selectedCandidate.canReportPanvel === "yes" ? "#047857" : "#B91C1C", marginTop: "2px" }}>
+                          <div style={{ padding: "14px", borderRadius: "10px", border: "1px solid", background: selectedCandidate.canReportPanvel === "yes" ? "rgba(16,185,129,0.04)" : "rgba(239,68,68,0.04)", borderColor: selectedCandidate.canReportPanvel === "yes" ? "#A7F3D0" : "#FCA5A5" }}>
+                            <p style={{ fontSize: "0.7rem", color: "#6B7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", margin: 0 }}>Panvel Office Commute</p>
+                            <p style={{ fontWeight: 700, fontSize: "0.88rem", color: selectedCandidate.canReportPanvel === "yes" ? "#047857" : "#B91C1C", marginTop: "6px" }}>
                               {selectedCandidate.canReportPanvel === "yes" ? "✅ Can report to Panvel" : "❌ Remote only"}
                             </p>
                           </div>
                         </div>
                       </div>
+
                     </div>
-                    
-                    <div style={{ padding: "14px 20px", borderTop: "1px solid #F3F4F6", textAlign: "right", background: "#F9FAFB" }}>
-                      <button 
+
+                    {/* Modal Footer */}
+                    <div style={{ padding: "14px 24px", borderTop: "1px solid #E5E7EB", background: "#F9FAFB", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <a href={`mailto:${selectedCandidate.email}`} style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.78rem", fontWeight: 600, color: "#4F46E5", background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.15)", padding: "7px 12px", borderRadius: "8px", textDecoration: "none" }}>
+                          <Mail size={13} /> Email
+                        </a>
+                        <a href={`tel:${selectedCandidate.phone}`} style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.78rem", fontWeight: 600, color: "#059669", background: "rgba(5,150,105,0.08)", border: "1px solid rgba(5,150,105,0.15)", padding: "7px 12px", borderRadius: "8px", textDecoration: "none" }}>
+                          <Phone size={13} /> Call
+                        </a>
+                        <a href={selectedCandidate.githubUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "0.78rem", fontWeight: 600, color: "#374151", background: "#F3F4F6", border: "1px solid #E5E7EB", padding: "7px 12px", borderRadius: "8px", textDecoration: "none" }}>
+                          <Github size={13} /> GitHub
+                        </a>
+                      </div>
+                      <button
                         onClick={() => setSelectedCandidate(null)}
-                        style={{ background: "#374151", border: "none", color: "#fff", padding: "8px 16px", borderRadius: "8px", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}
+                        style={{ background: "#374151", border: "none", color: "#fff", padding: "8px 18px", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}
                       >
                         Close
                       </button>
