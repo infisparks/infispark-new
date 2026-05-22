@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { ref, onValue, remove } from "firebase/database";
+import { ref, onValue, remove, update } from "firebase/database";
 import { db, auth } from "../../lib/firebase";
 import { 
   Sparkles, CheckCircle2, Github, FileText, Laptop, MapPin, 
@@ -16,6 +16,19 @@ interface Project {
   title: string;
   url: string;
   description: string;
+}
+
+interface Task {
+  title: string;
+  deadline: string;
+  assignedAt: string;
+}
+
+interface TaskSubmission {
+  explainWorking: string;
+  productionUrl: string;
+  githubUrl: string;
+  submittedAt: string;
 }
 
 interface Candidate {
@@ -37,7 +50,38 @@ interface Candidate {
   hasLaptop: string;
   canReportPanvel: string;
   appliedAt: string;
+  task?: Task;
+  taskSubmission?: TaskSubmission;
 }
+
+const formatDeadline = (dateTimeStr: string) => {
+  if (!dateTimeStr) return "";
+  try {
+    if (/[a-zA-Z]/.test(dateTimeStr) && !/am|pm/i.test(dateTimeStr)) return dateTimeStr;
+    const date = new Date(dateTimeStr);
+    if (isNaN(date.getTime())) return dateTimeStr;
+    const datePart = date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
+    
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const period = hours < 12 ? "morning" : "night";
+    
+    if (hours === 0) {
+      hours = 12;
+    } else if (hours > 12) {
+      hours -= 12;
+    }
+    
+    const hoursStr = String(hours).padStart(2, "0");
+    return `${datePart}, ${hoursStr}:${minutes} ${period}`;
+  } catch (e) {
+    return dateTimeStr;
+  }
+};
 
 export default function InternshipAdminPage() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -50,6 +94,16 @@ export default function InternshipAdminPage() {
   const [filterSupabase, setFilterSupabase] = useState("all");
   const [filterLaptop, setFilterLaptop] = useState("all");
   const [filterPanvel, setFilterPanvel] = useState("all");
+  const [filterTaskStatus, setFilterTaskStatus] = useState("all");
+
+  // Task assignment state
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [taskCandidate, setTaskCandidate] = useState<Candidate | null>(null);
+  const [taskName, setTaskName] = useState("");
+  const [taskDeadline, setTaskDeadline] = useState("");
+  const [isSavingTask, setIsSavingTask] = useState(false);
+  const [generatedMessage, setGeneratedMessage] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const router = useRouter();
 
@@ -132,6 +186,39 @@ export default function InternshipAdminPage() {
     }
   };
 
+  const handleSaveTask = async () => {
+    if (!taskCandidate) return;
+    if (!taskName.trim() || !taskDeadline) {
+      alert("Please fill in all fields.");
+      return;
+    }
+    setIsSavingTask(true);
+    const candidateRef = ref(db, `applications/${taskCandidate.id}`);
+    const taskData = {
+      title: taskName.trim(),
+      deadline: taskDeadline,
+      assignedAt: new Date().toLocaleDateString("en-IN", {
+        year: "numeric", month: "short", day: "numeric"
+      })
+    };
+    
+    try {
+      await update(candidateRef, { task: taskData });
+      
+      const origin = typeof window !== "undefined" ? window.location.origin : "https://infisparks.com";
+      const submissionUrl = `${origin}/internship/submit-task?candidateId=${taskCandidate.id}`;
+      const formattedDt = formatDeadline(taskDeadline);
+      const messageText = `Hi ${taskCandidate.name},\n\nWe have reviewed your application at Infispark. Here is your internship evaluation task:\n\n*Task*: ${taskName.trim()}\n*Submission Deadline*: ${formattedDt}\n\nPlease submit your task with production & GitHub URLs here:\n${submissionUrl}\n\nBest regards,\nInfispark Technologies`;
+      
+      setGeneratedMessage(messageText);
+    } catch (error) {
+      console.error("Firebase save task error:", error);
+      alert("Failed to save task details. Please check database credentials/rules.");
+    } finally {
+      setIsSavingTask(false);
+    }
+  };
+
   const exportCandidatesJSON = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(candidates, null, 2));
     const downloadAnchor = document.createElement("a");
@@ -159,7 +246,13 @@ export default function InternshipAdminPage() {
     const matchesPanvel = 
       filterPanvel === "all" || c.canReportPanvel === filterPanvel;
 
-    return matchesSearch && matchesSupabase && matchesLaptop && matchesPanvel;
+    const matchesTaskStatus = 
+      filterTaskStatus === "all" ||
+      (filterTaskStatus === "no_task" && !c.task) ||
+      (filterTaskStatus === "assigned" && c.task && !c.taskSubmission) ||
+      (filterTaskStatus === "submitted" && c.taskSubmission);
+
+    return matchesSearch && matchesSupabase && matchesLaptop && matchesPanvel && matchesTaskStatus;
   });
 
   // Stats calculation
@@ -167,6 +260,8 @@ export default function InternshipAdminPage() {
   const supabaseExperts = candidates.filter(c => c.knowsSupabase === "hands-on").length;
   const localCandidates = candidates.filter(c => c.canReportPanvel === "yes").length;
   const laptopOwners = candidates.filter(c => c.hasLaptop === "yes").length;
+  const tasksAssigned = candidates.filter(c => c.task).length;
+  const tasksSubmitted = candidates.filter(c => c.taskSubmission).length;
 
   if (loading || !authenticated) {
     return (
@@ -245,30 +340,30 @@ export default function InternshipAdminPage() {
             </div>
 
             {/* Stats Cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
               <div style={{ background: "#FFFFFF", padding: "16px 20px", borderRadius: "12px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
                 <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Applications</p>
                 <h3 style={{ fontSize: "28px", fontWeight: 800, color: "#111827", marginTop: "4px" }}>{totalCount}</h3>
               </div>
               <div style={{ background: "#FFFFFF", padding: "16px 20px", borderRadius: "12px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-                <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Supabase Preferred</p>
+                <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Supabase Experts</p>
                 <h3 style={{ fontSize: "28px", fontWeight: 800, color: "#4F46E5", marginTop: "4px", display: "flex", alignItems: "center", gap: "8px" }}>
                   {supabaseExperts}
                   {totalCount > 0 && <span style={{ fontSize: "0.78rem", fontWeight: 600, background: "rgba(99,102,241,0.08)", padding: "2px 6px", borderRadius: "4px" }}>{Math.round((supabaseExperts/totalCount)*100)}%</span>}
                 </h3>
               </div>
               <div style={{ background: "#FFFFFF", padding: "16px 20px", borderRadius: "12px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-                <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Report to Panvel</p>
-                <h3 style={{ fontSize: "28px", fontWeight: 800, color: "#10B981", marginTop: "4px", display: "flex", alignItems: "center", gap: "8px" }}>
-                  {localCandidates}
-                  {totalCount > 0 && <span style={{ fontSize: "0.78rem", fontWeight: 600, background: "rgba(16,185,129,0.08)", padding: "2px 6px", borderRadius: "4px" }}>{Math.round((localCandidates/totalCount)*100)}%</span>}
+                <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Tasks Assigned</p>
+                <h3 style={{ fontSize: "28px", fontWeight: 800, color: "#6366F1", marginTop: "4px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  {tasksAssigned}
+                  {totalCount > 0 && <span style={{ fontSize: "0.78rem", fontWeight: 600, background: "rgba(99,102,241,0.08)", padding: "2px 6px", borderRadius: "4px" }}>{Math.round((tasksAssigned/totalCount)*100)}%</span>}
                 </h3>
               </div>
               <div style={{ background: "#FFFFFF", padding: "16px 20px", borderRadius: "12px", border: "1px solid #E5E7EB", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-                <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Owns Laptop</p>
-                <h3 style={{ fontSize: "28px", fontWeight: 800, color: "#F59E0B", marginTop: "4px", display: "flex", alignItems: "center", gap: "8px" }}>
-                  {laptopOwners}
-                  {totalCount > 0 && <span style={{ fontSize: "0.78rem", fontWeight: 600, background: "rgba(245,158,11,0.08)", padding: "2px 6px", borderRadius: "4px" }}>{Math.round((laptopOwners/totalCount)*100)}%</span>}
+                <p style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.05em" }}>Tasks Submitted</p>
+                <h3 style={{ fontSize: "28px", fontWeight: 800, color: "#10B981", marginTop: "4px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  {tasksSubmitted}
+                  {tasksAssigned > 0 && <span style={{ fontSize: "0.78rem", fontWeight: 600, background: "rgba(16,185,129,0.08)", padding: "2px 6px", borderRadius: "4px" }}>{Math.round((tasksSubmitted/tasksAssigned)*100)}%</span>}
                 </h3>
               </div>
             </div>
@@ -337,6 +432,21 @@ export default function InternshipAdminPage() {
                   <option value="no">Remote Only</option>
                 </select>
               </div>
+
+              {/* Task Status Filter */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 700, color: "#6B7280" }}>Task Status</label>
+                <select 
+                  value={filterTaskStatus} 
+                  onChange={(e) => setFilterTaskStatus(e.target.value)}
+                  style={{ padding: "8px 12px", borderRadius: "8px", border: "1px solid #E5E7EB", fontSize: "0.82rem", outline: "none", background: "#FFFFFF" }}
+                >
+                  <option value="all">All Tasks</option>
+                  <option value="no_task">No Task Assigned</option>
+                  <option value="assigned">Task Assigned</option>
+                  <option value="submitted">Task Submitted</option>
+                </select>
+              </div>
             </div>
 
             {/* Applicants Table/Card View */}
@@ -358,6 +468,7 @@ export default function InternshipAdminPage() {
                         <th style={{ padding: "14px 16px" }}>Supabase</th>
                         <th style={{ padding: "14px 16px" }}>Laptop</th>
                         <th style={{ padding: "14px 16px" }}>Panvel Office</th>
+                        <th style={{ padding: "14px 16px" }}>Task Status</th>
                         <th style={{ padding: "14px 16px", textAlign: "right" }}>Actions</th>
                       </tr>
                     </thead>
@@ -407,6 +518,21 @@ export default function InternshipAdminPage() {
                               <span style={{ color: "#EF4444", fontWeight: 600 }}>No</span>
                             )}
                           </td>
+                          <td style={{ padding: "12px 16px" }}>
+                            {cand.taskSubmission ? (
+                              <span style={{ background: "rgba(16,185,129,0.1)", color: "#10B981", fontWeight: 700, padding: "4px 10px", borderRadius: "9999px", fontSize: "0.72rem" }}>
+                                Submitted
+                              </span>
+                            ) : cand.task ? (
+                              <span style={{ background: "rgba(79,70,229,0.1)", color: "#4F46E5", fontWeight: 700, padding: "4px 10px", borderRadius: "9999px", fontSize: "0.72rem" }}>
+                                Assigned
+                              </span>
+                            ) : (
+                              <span style={{ background: "#F3F4F6", color: "#6B7280", fontWeight: 500, padding: "4px 10px", borderRadius: "9999px", fontSize: "0.72rem" }}>
+                                No Task
+                              </span>
+                            )}
+                          </td>
                           <td style={{ padding: "12px 16px", textAlign: "right" }}>
                             <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                               <button 
@@ -414,6 +540,28 @@ export default function InternshipAdminPage() {
                                 style={{ background: "#4F46E5", border: "none", color: "#fff", padding: "5px 10px", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
                               >
                                 View
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setTaskCandidate(cand);
+                                  setTaskName(cand.task?.title || "");
+                                  setTaskDeadline(cand.task?.deadline || "");
+                                  setGeneratedMessage("");
+                                  setCopied(false);
+                                  setTaskModalOpen(true);
+                                }}
+                                style={{
+                                  background: cand.task ? "rgba(99,102,241,0.06)" : "#FFFFFF",
+                                  border: `1px solid ${cand.task ? "#4F46E5" : "#E5E7EB"}`,
+                                  color: cand.task ? "#4F46E5" : "#374151",
+                                  padding: "5px 10px",
+                                  borderRadius: "6px",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 600,
+                                  cursor: "pointer"
+                                }}
+                              >
+                                {cand.task ? "Manage Task" : "Give Task"}
                               </button>
                               <button 
                                 onClick={() => deleteCandidate(cand.id, cand.name)}
@@ -616,6 +764,101 @@ export default function InternshipAdminPage() {
                         </div>
                       </div>
 
+                      {/* Section 8: Internship Evaluation Task */}
+                      <div style={{ borderTop: "1px solid #E5E7EB", paddingTop: "20px" }}>
+                        <h4 style={{ fontSize: "0.72rem", fontWeight: 700, color: "#4B5563", textTransform: "uppercase", letterSpacing: "0.07em", display: "flex", alignItems: "center", gap: "5px", marginBottom: "10px" }}>
+                          <Code size={12} /> Internship Evaluation Task
+                        </h4>
+                        {selectedCandidate.task ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                            <div style={{ background: "#F9FAFB", padding: "14px", borderRadius: "10px", border: "1px solid #E5E7EB" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
+                                <div>
+                                  <p style={{ fontSize: "0.85rem", fontWeight: 700, color: "#111827", margin: 0, whiteSpace: "pre-line" }}>{selectedCandidate.task.title}</p>
+                                  <p style={{ fontSize: "0.75rem", color: "#6B7280", margin: "2px 0 0" }}>
+                                    Assigned: {selectedCandidate.task.assignedAt} &nbsp;•&nbsp; Deadline: <strong style={{ color: "#D97706" }}>{formatDeadline(selectedCandidate.task.deadline)}</strong>
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setTaskCandidate(selectedCandidate);
+                                    setTaskName(selectedCandidate.task?.title || "");
+                                    setTaskDeadline(selectedCandidate.task?.deadline || "");
+                                    setGeneratedMessage("");
+                                    setCopied(false);
+                                    setSelectedCandidate(null);
+                                    setTaskModalOpen(true);
+                                  }}
+                                  style={{
+                                    background: "#FFFFFF", border: "1px solid #E5E7EB", color: "#374151",
+                                    padding: "4px 8px", borderRadius: "6px", fontSize: "0.72rem", fontWeight: 600, cursor: "pointer"
+                                  }}
+                                >
+                                  Modify / Share Task
+                                </button>
+                              </div>
+                            </div>
+
+                            {selectedCandidate.taskSubmission ? (
+                              <div style={{ background: "rgba(16,185,129,0.02)", padding: "14px", borderRadius: "10px", border: "1px solid #A7F3D0" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                                  <CheckCircle2 size={14} style={{ color: "#10B981" }} />
+                                  <span style={{ fontWeight: 700, fontSize: "0.82rem", color: "#047857" }}>Task Submitted on {selectedCandidate.taskSubmission.submittedAt}</span>
+                                </div>
+                                
+                                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                                  <div>
+                                    <p style={{ fontSize: "0.68rem", color: "#6B7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", margin: 0 }}>Working Explanation</p>
+                                    <p style={{ fontSize: "0.82rem", color: "#374151", marginTop: "3px", whiteSpace: "pre-line", lineHeight: 1.5 }}>
+                                      {selectedCandidate.taskSubmission.explainWorking}
+                                    </p>
+                                  </div>
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                                    <div style={{ background: "#FFFFFF", padding: "8px 12px", borderRadius: "6px", border: "1px solid #E5E7EB" }}>
+                                      <p style={{ fontSize: "0.68rem", color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", margin: 0 }}>Live URL</p>
+                                      <a href={selectedCandidate.taskSubmission.productionUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.8rem", fontWeight: 600, color: "#4F46E5", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", marginTop: "3px", wordBreak: "break-all" }}>
+                                        <ExternalLink size={12} /> Live Link
+                                      </a>
+                                    </div>
+                                    <div style={{ background: "#FFFFFF", padding: "8px 12px", borderRadius: "6px", border: "1px solid #E5E7EB" }}>
+                                      <p style={{ fontSize: "0.68rem", color: "#9CA3AF", fontWeight: 600, textTransform: "uppercase", margin: 0 }}>GitHub URL</p>
+                                      <a href={selectedCandidate.taskSubmission.githubUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.8rem", fontWeight: 600, color: "#374151", textDecoration: "none", display: "flex", alignItems: "center", gap: "4px", marginTop: "3px", wordBreak: "break-all" }}>
+                                        <Github size={12} /> Repository
+                                      </a>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ background: "rgba(245,158,11,0.02)", padding: "14px", borderRadius: "10px", border: "1px solid #FCD34D", color: "#D97706", fontSize: "0.8rem", fontWeight: 600 }}>
+                                ⏳ Awaiting candidate's submission.
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ background: "#F9FAFB", padding: "14px", borderRadius: "10px", border: "1px solid #E5E7EB", textAlign: "center" }}>
+                            <p style={{ fontSize: "0.8rem", color: "#6B7280", margin: "0 0 10px" }}>No task has been assigned to this candidate yet.</p>
+                            <button
+                              onClick={() => {
+                                setTaskCandidate(selectedCandidate);
+                                setTaskName("");
+                                setTaskDeadline("");
+                                setGeneratedMessage("");
+                                setCopied(false);
+                                setSelectedCandidate(null);
+                                setTaskModalOpen(true);
+                              }}
+                              style={{
+                                background: "#4F46E5", border: "none", color: "#FFFFFF",
+                                padding: "6px 12px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer"
+                              }}
+                            >
+                              Assign Test Task Now
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                     </div>
 
                     {/* Modal Footer */}
@@ -633,6 +876,156 @@ export default function InternshipAdminPage() {
                       </div>
                       <button
                         onClick={() => setSelectedCandidate(null)}
+                        style={{ background: "#374151", border: "none", color: "#fff", padding: "8px 18px", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* Give/Manage Task Modal */}
+            <AnimatePresence>
+              {taskModalOpen && taskCandidate && (
+                <div
+                  onClick={(e) => { if (e.target === e.currentTarget) setTaskModalOpen(false); }}
+                  style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(15,23,42,0.45)", backdropFilter: "blur(5px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1100, padding: "16px" }}
+                >
+                  <motion.div
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    style={{ background: "#FFFFFF", borderRadius: "16px", width: "100%", maxWidth: "520px", margin: "auto", overflow: "hidden", border: "1px solid #E5E7EB", boxShadow: "0 20px 40px -5px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", maxHeight: "90vh" }}
+                  >
+                    {/* Modal Header */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: "1px solid #E5E7EB", background: "#F9FAFB", flexShrink: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "rgba(99,102,241,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <Laptop size={18} style={{ color: "#4F46E5" }} />
+                        </div>
+                        <div>
+                          <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#111827", margin: 0 }}>Assign Internship Task</h3>
+                          <p style={{ fontSize: "0.72rem", color: "#6B7280", margin: "2px 0 0" }}>
+                            Candidate: <strong style={{ color: "#111827" }}>{taskCandidate.name}</strong>
+                          </p>
+                        </div>
+                      </div>
+                      <button onClick={() => setTaskModalOpen(false)} style={{ background: "#F3F4F6", border: "none", color: "#6B7280", cursor: "pointer", padding: "6px", borderRadius: "8px", display: "flex", alignItems: "center" }}>
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px", overflowY: "auto" }}>
+                      {generatedMessage ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(16,185,129,0.08)", padding: "10px 12px", borderRadius: "8px", border: "1px solid #A7F3D0" }}>
+                            <CheckCircle2 size={16} style={{ color: "#10B981" }} />
+                            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#047857" }}>Task Details Saved Successfully!</span>
+                          </div>
+                          
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <label style={{ fontSize: "12px", fontWeight: 700, color: "#111827" }}>WhatsApp Invitation Message</label>
+                            <pre style={{
+                              background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: "8px", padding: "12px",
+                              fontSize: "0.8rem", color: "#374151", whiteSpace: "pre-wrap", wordBreak: "break-word",
+                              maxHeight: "180px", overflowY: "auto", margin: 0, fontFamily: "Inter, sans-serif", lineHeight: 1.5
+                            }}>
+                              {generatedMessage}
+                            </pre>
+                          </div>
+
+                          <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(generatedMessage);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 2000);
+                              }}
+                              style={{
+                                flex: 1, background: copied ? "#10B981" : "#FFFFFF", border: `1px solid ${copied ? "#10B981" : "#E5E7EB"}`,
+                                color: copied ? "#FFFFFF" : "#374151", padding: "10px", borderRadius: "8px", fontSize: "0.82rem",
+                                fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", transition: "all 0.2s"
+                              }}
+                            >
+                              <FileText size={14} /> {copied ? "Copied!" : "Copy Message"}
+                            </button>
+                            <a
+                              href={`https://wa.me/${taskCandidate.phone.replace(/\D/g, "").length === 10 ? "91" + taskCandidate.phone.replace(/\D/g, "") : taskCandidate.phone.replace(/\D/g, "")}?text=${encodeURIComponent(generatedMessage)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                flex: 1, background: "#25D366", color: "#FFFFFF", padding: "10px", borderRadius: "8px", fontSize: "0.82rem",
+                                fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", transition: "all 0.2s"
+                              }}
+                            >
+                              <Phone size={14} /> Send on WhatsApp
+                            </a>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <label style={{ fontSize: "12px", fontWeight: 700, color: "#111827" }}>
+                              Task Name *
+                            </label>
+                            <textarea
+                              placeholder="Describe the task details, requirements, and specifications here..."
+                              value={taskName}
+                              onChange={(e) => setTaskName(e.target.value)}
+                              style={{
+                                width: "100%", minHeight: "120px", padding: "10px 12px", borderRadius: "8px", border: "1px solid #E5E7EB",
+                                fontSize: "0.85rem", boxSizing: "border-box", outline: "none", color: "#111827", resize: "vertical", fontFamily: "Inter, sans-serif"
+                              }}
+                            />
+                          </div>
+
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            <label style={{ fontSize: "12px", fontWeight: 700, color: "#111827" }}>
+                              Submission Deadline (Date & Time) *
+                            </label>
+                            <input
+                              type="datetime-local"
+                              value={taskDeadline}
+                              onChange={(e) => setTaskDeadline(e.target.value)}
+                              style={{
+                                width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #E5E7EB",
+                                fontSize: "0.85rem", boxSizing: "border-box", outline: "none", color: "#111827"
+                              }}
+                            />
+                          </div>
+
+                          <button
+                            onClick={handleSaveTask}
+                            disabled={isSavingTask}
+                            style={{
+                              background: "#4F46E5", color: "#FFFFFF", border: "none", padding: "12px", borderRadius: "8px",
+                              fontSize: "0.85rem", fontWeight: 700, cursor: isSavingTask ? "not-allowed" : "pointer",
+                              display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", transition: "all 0.2s"
+                            }}
+                          >
+                            {isSavingTask ? (
+                              <>
+                                <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                                Saving Task Details...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 size={16} />
+                                Save Task & Generate Invite
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div style={{ padding: "14px 24px", borderTop: "1px solid #E5E7EB", background: "#F9FAFB", display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
+                      <button
+                        onClick={() => setTaskModalOpen(false)}
                         style={{ background: "#374151", border: "none", color: "#fff", padding: "8px 18px", borderRadius: "8px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" }}
                       >
                         Close
