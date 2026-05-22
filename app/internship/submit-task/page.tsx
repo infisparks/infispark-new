@@ -1,6 +1,13 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import { Poppins } from "next/font/google";
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  display: "swap",
+});
 import { useSearchParams } from "next/navigation";
 import { ref, get, update } from "firebase/database";
 import { db } from "../../lib/firebase";
@@ -353,7 +360,7 @@ function TaskSubmissionContent() {
                     fontSize: "0.85rem",
                     boxSizing: "border-box",
                     outline: "none",
-                    fontFamily: "Inter, sans-serif",
+                    fontFamily: "inherit",
                     resize: "vertical"
                   }}
                 />
@@ -461,7 +468,7 @@ function TaskSubmissionContent() {
 
 export default function TaskSubmissionPage() {
   return (
-    <main style={{ background: "#F5F6F8", minHeight: "100vh", paddingTop: "60px", paddingBottom: "100px", fontFamily: "Inter, sans-serif" }}>
+    <main className={poppins.className} style={{ background: "#F5F6F8", minHeight: "100vh", paddingTop: "60px", paddingBottom: "100px" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 16px" }}>
         {/* Simple Navigation Header */}
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
