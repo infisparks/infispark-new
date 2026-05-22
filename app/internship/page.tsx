@@ -12,7 +12,6 @@ import GoToTop from "../components/GoToTop";
 import ContactFooter from "../components/ContactFooter";
 import { db } from "../lib/firebase";
 import { ref, set, onValue, remove } from "firebase/database";
-import Image from "next/image";
 
 interface Project {
   title: string;
@@ -458,7 +457,7 @@ export default function InternshipPage() {
 
   return (
     <>
-      <main className="internship-page" style={{ background: "#F5F6F8", minHeight: "100vh", paddingTop: "40px", paddingBottom: "80px" }}>
+      <main style={{ background: "#F5F6F8", minHeight: "100vh", paddingTop: "40px", paddingBottom: "80px" }}>
         <div className="container-main" style={{ maxWidth: isAdmin ? "1200px" : "800px", margin: "0 auto", padding: "0 16px" }}>
           
           {/* Admin Dashboard Mode */}
@@ -472,7 +471,7 @@ export default function InternshipPage() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", borderBottom: "1px solid #E5E7EB", paddingBottom: "16px" }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ background: "rgba(7,64,243,0.1)", color: "var(--color-primary)", padding: "4px 8px", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 700 }}>ADMIN PORTAL</span>
+                    <span style={{ background: "rgba(99,102,241,0.1)", color: "var(--color-primary)", padding: "4px 8px", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 700 }}>ADMIN PORTAL</span>
                   </div>
                   <h1 style={{ fontSize: "24px", fontWeight: 800, color: "#111827", marginTop: "6px", fontFamily: "var(--font-outfit), sans-serif" }}>Intern Applications Tracking</h1>
                   <p style={{ color: "#6B7280", fontSize: "0.85rem", marginTop: "2px" }}>Review and shortlist software engineering interns.</p>
@@ -554,7 +553,7 @@ export default function InternshipPage() {
                       <tbody>
                         {candidates.map((cand) => (
                           <tr key={cand.id} style={{ borderBottom: "1px solid #F3F4F6", color: "#1F2937", transition: "background 0.2s" }} className="hover-row">
-                            <td style={{ padding: "12px 16px", fontWeight: 600, color: "#0740F3" }}>{cand.id}</td>
+                            <td style={{ padding: "12px 16px", fontWeight: 600, color: "#4F46E5" }}>{cand.id}</td>
                             <td style={{ padding: "12px 16px" }}>
                               <div style={{ fontWeight: 700, color: "#111827" }}>{cand.name}</div>
                               <div style={{ fontSize: "0.78rem", color: "#6B7280" }}>Age: {cand.age} • {cand.qualification}</div>
@@ -571,14 +570,14 @@ export default function InternshipPage() {
                               </div>
                               <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
                                 <a href={cand.githubUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "2px", fontSize: "0.72rem", color: "#374151", textDecoration: "underline" }}><Github size={11} /> GitHub</a>
-                                <a href={cand.resumeUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "2px", fontSize: "0.72rem", color: "#0740F3", textDecoration: "underline" }}><FileText size={11} /> Resume</a>
+                                <a href={cand.resumeUrl} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", gap: "2px", fontSize: "0.72rem", color: "#4F46E5", textDecoration: "underline" }}><FileText size={11} /> Resume</a>
                               </div>
                             </td>
                             <td style={{ padding: "12px 16px" }}>
                               {cand.knowsSupabase === "hands-on" ? (
-                                <span style={{ background: "rgba(7,64,243,0.12)", color: "var(--color-primary)", fontWeight: 700, padding: "3px 8px", borderRadius: "9999px", fontSize: "0.72rem" }}>🔥 Yes, Hands-on</span>
+                                <span style={{ background: "rgba(99,102,241,0.12)", color: "var(--color-primary)", fontWeight: 700, padding: "3px 8px", borderRadius: "9999px", fontSize: "0.72rem" }}>🔥 Yes, Hands-on</span>
                               ) : cand.knowsSupabase === "basic" ? (
-                                <span style={{ background: "rgba(7,64,243,0.06)", color: "#0740F3", fontWeight: 500, padding: "3px 8px", borderRadius: "9999px", fontSize: "0.72rem" }}>Basic</span>
+                                <span style={{ background: "rgba(99,102,241,0.06)", color: "#4F46E5", fontWeight: 500, padding: "3px 8px", borderRadius: "9999px", fontSize: "0.72rem" }}>Basic</span>
                               ) : (
                                 <span style={{ color: "#9CA3AF", fontSize: "0.75rem" }}>None</span>
                               )}
@@ -601,7 +600,7 @@ export default function InternshipPage() {
                               <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                                 <button 
                                   onClick={() => setSelectedCandidate(cand)}
-                                  style={{ background: "#0740F3", border: "none", color: "#fff", padding: "5px 10px", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
+                                  style={{ background: "#4F46E5", border: "none", color: "#fff", padding: "5px 10px", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}
                                 >
                                   View
                                 </button>
@@ -720,8 +719,7 @@ export default function InternshipPage() {
             
             /* Candidate Internship Application Form */
             <div style={{ maxWidth: "680px", margin: "0 auto" }}>
-
-
+              
               {/* Form Status Navigation */}
               <AnimatePresence mode="wait">
                 {isSubmitted ? (
@@ -813,7 +811,7 @@ export default function InternshipPage() {
                   >
                     {/* Header Details */}
                     <div style={{ textAlign: "center", marginBottom: "8px" }}>
-                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(7,64,243,0.06)", border: "1px solid rgba(7,64,243,0.15)", padding: "5px 12px", borderRadius: "9999px", color: "var(--color-primary)", fontSize: "0.78rem", fontWeight: 700, marginBottom: "12px" }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)", padding: "5px 12px", borderRadius: "9999px", color: "var(--color-primary)", fontSize: "0.78rem", fontWeight: 700, marginBottom: "12px" }}>
                         <Sparkles size={12} /> OPEN INVITATION
                       </div>
                       <h1 style={{ fontSize: "24px", fontWeight: 900, color: "#111827", fontFamily: "var(--font-outfit), sans-serif", letterSpacing: "-0.01em" }}>Custom Software Developer Internship</h1>
@@ -821,23 +819,6 @@ export default function InternshipPage() {
                         Join <strong style={{ fontWeight: 700 }}>Infispark Technologies LLP</strong> in Panvel, Mumbai. We build specialized business applications, AI workflows, and OTT systems. Show us your coding mettle.
                       </p>
                     </div>
-
-                    {/* Banner */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.1 }}
-                      style={{ borderRadius: "14px", overflow: "hidden", marginBottom: "8px" }}
-                    >
-                      <Image
-                        src="/banner.png"
-                        alt="Infispark Technologies – We're Hiring Developer Interns · Earn ₹10,000/month"
-                        width={1200}
-                        height={400}
-                        style={{ width: "100%", height: "auto", display: "block" }}
-                        priority
-                      />
-                    </motion.div>
 
                     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "24px" }} noValidate>
                       
@@ -1474,24 +1455,6 @@ export default function InternshipPage() {
 
       <BookDemoModal isOpen={demoOpen} onClose={() => setDemoOpen(false)} />
       <GoToTop />
-      <style>{`
-        .internship-page {
-          --color-primary: #0740F3;
-        }
-        .internship-page .glow-btn-primary {
-          box-shadow: 0 4px 16px rgba(7, 64, 243, 0.3);
-        }
-        .internship-page .glow-btn-primary:hover {
-          background: #0535d4 !important;
-          box-shadow: 0 6px 20px rgba(7, 64, 243, 0.4);
-        }
-        .internship-page input:focus,
-        .internship-page textarea:focus,
-        .internship-page select:focus {
-          border-color: #0740F3 !important;
-          box-shadow: 0 0 0 3px rgba(7, 64, 243, 0.1);
-        }
-      `}</style>
     </>
   );
 }
